@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -27,48 +29,87 @@ public class CategoryServiceImpl implements ICategoryService {
     @Autowired
     private CategoryMapper categoryMapper;
 
-    public ServerResponse addCategory(String categoryName,Integer parentId){
-        if(parentId == null || StringUtils.isBlank(categoryName)){
-            return ServerResponse.createByErrorMessage("添加品类参数错误");
-        }
 
+    /**
+     *  添加商品分类
+     * @param categoryName  商品分类名称
+     * @param parentId  商品父分类id
+     * @return  返回一个通用返回对象
+     */
+    @Override
+    public ServerResponse addCategory(String categoryName, Integer parentId) {
+        if (StringUtils.isBlank(categoryName) || parentId == null){
+            return ServerResponse.createByErrorMessage("添加商品分类错误");
+        }
+        //封装一个对象
         Category category = new Category();
-        category.setName(categoryName);
         category.setParentId(parentId);
-        category.setStatus(true);//这个分类是可用的
-
-        int rowCount = categoryMapper.insert(category);
-        if(rowCount > 0){
-            return ServerResponse.createBySuccess("添加品类成功");
+        category.setName(categoryName);
+        category.setStatus(true);
+        category.setCreateTime(new Date());
+        //插入节点
+        int resultCount = categoryMapper.insert(category);
+        //判断节点是否插入成功
+        if (resultCount > 0){
+            //成功
+            return ServerResponse.createBySuccessMessage("添加商品分类成功");
         }
-        return ServerResponse.createByErrorMessage("添加品类失败");
+        //失败
+        return ServerResponse.createByErrorMessage("添加商品分类失败");
     }
 
+//    @Override
+//    public ServerResponse updateCategoryName(Integer categoryId, String categoryName){
+//        if(categoryId == null || StringUtils.isBlank(categoryName)){
+//            return ServerResponse.createByErrorMessage("更新品类参数错误");
+//        }
+//        Category category = new Category();
+//        category.setId(categoryId);
+//        category.setName(categoryName);
+//
+//        int rowCount = categoryMapper.updateByPrimaryKeySelective(category);
+//        if(rowCount > 0){
+//            return ServerResponse.createBySuccess("更新品类名字成功");
+//        }
+//        return ServerResponse.createByErrorMessage("更新品类名字失败");
+//    }
+
+    /**
+     * 更新商品分类名称
+     * @param categoryId 商品分类id
+     * @param categoryName 商品分类名称
+     * @return
+     */
     @Override
-    public ServerResponse updateCategoryName(Integer categoryId, String categoryName){
-        if(categoryId == null || StringUtils.isBlank(categoryName)){
-            return ServerResponse.createByErrorMessage("更新品类参数错误");
+    public ServerResponse updateCategoryName(Integer categoryId, String categoryName) {
+        if (StringUtils.isBlank(categoryName) || categoryId ==null){
+            return ServerResponse.createByErrorMessage("更新商品参数错误");
         }
         Category category = new Category();
         category.setId(categoryId);
         category.setName(categoryName);
-
         int rowCount = categoryMapper.updateByPrimaryKeySelective(category);
-        if(rowCount > 0){
-            return ServerResponse.createBySuccess("更新品类名字成功");
+        if (rowCount > 0){
+            return ServerResponse.createBySuccessMessage("更新品类");
         }
-        return ServerResponse.createByErrorMessage("更新品类名字失败");
+        return ServerResponse.createByErrorMessage("更新品类失败");
     }
 
+    /**
+     * 获取当前节点和递归获取子节点的值
+     * @param categoryId 分类id
+     * @return
+     */
     @Override
-    public ServerResponse<List<Category>> getChildrenParallelCategory(Integer categoryId){
+    public ServerResponse<List<Category>> getChildrenParallelCategory(Integer categoryId) {
         List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
-        if(CollectionUtils.isEmpty(categoryList)){
-            logger.info("未找到当前分类的子分类");
-            return ServerResponse.createByErrorMessage("未找到当前商品的子分类");
+        if (CollectionUtils.isNotEmpty(categoryList)){
+            return ServerResponse.createByErrorMessage("未能找到当前商品的子分类");
         }
         return ServerResponse.createBySuccess(categoryList);
     }
+
+
 
 
     /**
@@ -76,35 +117,81 @@ public class CategoryServiceImpl implements ICategoryService {
      * @param categoryId
      * @return
      */
+//    @Override
+//    public ServerResponse<List<Integer>> selectCategoryAndChildrenById(Integer categoryId){
+//        Set<Category> categorySet = Sets.newHashSet();
+//        findChildCategory(categorySet,categoryId);
+//
+//
+//        List<Integer> categoryIdList = Lists.newArrayList();
+//        if(categoryId != null){
+//            for(Category categoryItem : categorySet){
+//                categoryIdList.add(categoryItem.getId());
+//            }
+//        }
+//        return ServerResponse.createBySuccess(categoryIdList);
+//    }
+
+
+
     @Override
-    public ServerResponse<List<Integer>> selectCategoryAndChildrenById(Integer categoryId){
+    public ServerResponse<List<Integer>> selectCategoryAndChildrenById(Integer categoryId) {
         Set<Category> categorySet = Sets.newHashSet();
         findChildCategory(categorySet,categoryId);
+        List<Integer> list = Lists.newArrayList();
+        if (categoryId != null || CollectionUtils.isNotEmpty(categorySet)){
+            return ServerResponse.createByErrorMessage("商品分类的id为空和他的子分类为空");
+        }
+        for (Category category : categorySet) {
+            list.add(category.getId());
+        }
+        return ServerResponse.createBySuccess(list);
+    }
 
-
-        List<Integer> categoryIdList = Lists.newArrayList();
-        if(categoryId != null){
-            for(Category categoryItem : categorySet){
-                categoryIdList.add(categoryItem.getId());
+    private void findChildCategory(Set<Category> categorySet, Integer categoryId) {
+        Category category = categoryMapper.selectByPrimaryKey(categoryId);
+        if (category != null){
+            categorySet.add(category);
+        }
+        List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
+        if (CollectionUtils.isNotEmpty(categoryList)){
+            for (Category categoryItem : categoryList) {
+                findChildCategory(categorySet,categoryItem.getId());
             }
         }
-        return ServerResponse.createBySuccess(categoryIdList);
     }
+
+    /**
+     * 递归查询出子节点
+     * @param categorySet
+     * @param categoryId
+     */
+//    private void findChildCategory(Set<Category> categorySet, Integer categoryId) {
+//        Category category = categoryMapper.selectByPrimaryKey(categoryId);
+//        if (category != null){
+//            categorySet.add(category);
+//        }
+//        //查询出子节点  select * from category where parent_Id = #{parent_Id}
+//        List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
+//        for (Category categoryItem : categoryList) {
+//            findChildCategory(categorySet,categoryItem.getId());
+//        }
+//    }
 
 
     //递归算法,算出子节点
-    private Set<Category> findChildCategory(Set<Category> categorySet ,Integer categoryId){
-        Category category = categoryMapper.selectByPrimaryKey(categoryId);
-        if(category != null){
-            categorySet.add(category);
-        }
-        //查找子节点,递归算法一定要有一个退出的条件
-        List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
-        for(Category categoryItem : categoryList){
-            findChildCategory(categorySet,categoryItem.getId());
-        }
-        return categorySet;
-    }
+//    private Set<Category> findChildCategory(Set<Category> categorySet ,Integer categoryId){
+//        Category category = categoryMapper.selectByPrimaryKey(categoryId);
+//        if(category != null){
+//            categorySet.add(category);
+//        }
+//        //查找子节点,递归算法一定要有一个退出的条件
+//        List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
+//        for(Category categoryItem : categoryList){
+//            findChildCategory(categorySet,categoryItem.getId());
+//        }
+//        return categorySet;
+//    }
 
 
 

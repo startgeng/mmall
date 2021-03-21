@@ -133,7 +133,11 @@ public class CategoryServiceImpl implements ICategoryService {
 //    }
 
 
-
+    /**
+     * 获取的使商品分类以及子分类的数据
+     * @param categoryId
+     * @return
+     */
     @Override
     public ServerResponse<List<Integer>> selectCategoryAndChildrenById(Integer categoryId) {
         Set<Category> categorySet = Sets.newHashSet();

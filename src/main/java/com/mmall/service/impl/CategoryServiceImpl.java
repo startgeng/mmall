@@ -13,10 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by geely
@@ -140,23 +137,32 @@ public class CategoryServiceImpl implements ICategoryService {
      */
     @Override
     public ServerResponse<List<Integer>> selectCategoryAndChildrenById(Integer categoryId) {
-        Set<Category> categorySet = Sets.newHashSet();
-        findChildCategory(categorySet,categoryId);
-        List<Integer> list = Lists.newArrayList();
-        if (categoryId != null || CollectionUtils.isNotEmpty(categorySet)){
-            return ServerResponse.createByErrorMessage("商品分类的id为空和他的子分类为空");
+        if (categoryId == null){
+            return ServerResponse.createByErrorMessage("分类id不能为空");
         }
-        for (Category category : categorySet) {
-            list.add(category.getId());
+        HashSet<Category> categoryHashSet = Sets.newHashSet();
+        findChildCategory(categoryHashSet,categoryId);
+        List<Integer> list = Lists.newArrayList();
+        if (CollectionUtils.isNotEmpty(categoryHashSet)){
+            for (Category category : categoryHashSet) {
+                list.add(category.getId());
+            }
         }
         return ServerResponse.createBySuccess(list);
     }
 
+    /**
+     *
+     * @param categorySet 分类集合
+     * @param categoryId    分类id
+     * 递归查询分类
+     */
     private void findChildCategory(Set<Category> categorySet, Integer categoryId) {
         Category category = categoryMapper.selectByPrimaryKey(categoryId);
-        if (category != null){
+        if (categoryId != null){
             categorySet.add(category);
         }
+        //查询子节点
         List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
         if (CollectionUtils.isNotEmpty(categoryList)){
             for (Category categoryItem : categoryList) {
@@ -164,42 +170,6 @@ public class CategoryServiceImpl implements ICategoryService {
             }
         }
     }
-
-    /**
-     * 递归查询出子节点
-     * @param categorySet
-     * @param categoryId
-     */
-//    private void findChildCategory(Set<Category> categorySet, Integer categoryId) {
-//        Category category = categoryMapper.selectByPrimaryKey(categoryId);
-//        if (category != null){
-//            categorySet.add(category);
-//        }
-//        //查询出子节点  select * from category where parent_Id = #{parent_Id}
-//        List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
-//        for (Category categoryItem : categoryList) {
-//            findChildCategory(categorySet,categoryItem.getId());
-//        }
-//    }
-
-
-    //递归算法,算出子节点
-//    private Set<Category> findChildCategory(Set<Category> categorySet ,Integer categoryId){
-//        Category category = categoryMapper.selectByPrimaryKey(categoryId);
-//        if(category != null){
-//            categorySet.add(category);
-//        }
-//        //查找子节点,递归算法一定要有一个退出的条件
-//        List<Category> categoryList = categoryMapper.selectCategoryChildrenByParentId(categoryId);
-//        for(Category categoryItem : categoryList){
-//            findChildCategory(categorySet,categoryItem.getId());
-//        }
-//        return categorySet;
-//    }
-
-
-
-
 
 
 }

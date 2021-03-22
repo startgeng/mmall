@@ -21,7 +21,8 @@ public class FileServiceImpl implements IFileService {
     private Logger logger = LoggerFactory.getLogger(FileServiceImpl.class);
 
 
-    public String upload(MultipartFile file,String path){
+    @Override
+    public String upload(MultipartFile file, String path){
         String fileName = file.getOriginalFilename();
         //扩展名
         //abc.jpg
@@ -55,4 +56,9 @@ public class FileServiceImpl implements IFileService {
         return targetFile.getName();
     }
 
+    public static void main(String[] args) {
+        String fileName = "abc.jpg";
+        System.out.println( fileName.substring(fileName.lastIndexOf(".")+1));
+        System.out.println( fileName.substring(1));
+    }
 }

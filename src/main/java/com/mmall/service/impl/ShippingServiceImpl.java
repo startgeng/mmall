@@ -61,7 +61,15 @@ public class ShippingServiceImpl implements IShippingService {
     }
 
 
-    public ServerResponse<PageInfo> list(Integer userId,int pageNum,int pageSize){
+    /**
+     * 获取当前用户的购物车
+     * @param userId 用户id
+     * @param pageNum 当前页数
+     * @param pageSize 每页显示条数
+     * @return 列表数据
+     */
+    @Override
+    public ServerResponse<PageInfo> list(Integer userId, int pageNum, int pageSize){
         PageHelper.startPage(pageNum,pageSize);
         List<Shipping> shippingList = shippingMapper.selectByUserId(userId);
         PageInfo pageInfo = new PageInfo(shippingList);

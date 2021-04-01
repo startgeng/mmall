@@ -32,44 +32,78 @@ public class CartServiceImpl implements ICartService {
     @Autowired
     private ProductMapper productMapper;
 
-    public ServerResponse<CartVo> add(Integer userId,Integer productId,Integer count){
-        if(productId == null || count == null){
-            return ServerResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(),ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+    /**
+     *  添加商品到购物车
+     * @param userId 用户id
+     * @param productId 商品id
+     * @param count 商品数量
+     * @return 返回购物车里面的商品
+     */
+    @Override
+    public ServerResponse<CartVo> add(Integer userId, Integer productId, Integer count) {
+        if (productId == null || count == null){
+            return ServerResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), ResponseCode.ILLEGAL_ARGUMENT.getDesc());
         }
-
-
-        Cart cart = cartMapper.selectCartByUserIdProductId(userId,productId);
-        if(cart == null){
-            //这个产品不在这个购物车里,需要新增一个这个产品的记录
+        Cart cart = cartMapper.selectCartByUserIdProductId(userId, productId);
+        if (cart == null){
+            //如果cart为空代表这个产品不在购物里面1,需要新增一个这个产品的记录
             Cart cartItem = new Cart();
             cartItem.setQuantity(count);
-            cartItem.setChecked(Const.Cart.CHECKED);
-            cartItem.setProductId(productId);
             cartItem.setUserId(userId);
+            cart.setProductId(productId);
             cartMapper.insert(cartItem);
-        }else{
-            //这个产品已经在购物车里了.
-            //如果产品已存在,数量相加
+        }else {
+            //如果这个产品已经在购物车里面了 只需要累加了
             count = cart.getQuantity() + count;
             cart.setQuantity(count);
-            cartMapper.updateByPrimaryKeySelective(cart);
+            cartMapper.updateByPrimaryKey(cart);
         }
         return this.list(userId);
     }
 
-    public ServerResponse<CartVo> update(Integer userId,Integer productId,Integer count){
-        if(productId == null || count == null){
-            return ServerResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(),ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+    /**
+     * 更新购物车里面的商品的数据
+     * @param userId 用户id
+     * @param productId 商品id
+     * @param count 商品数量
+     * @return 返回一个购物车对象
+     */
+    @Override
+    public ServerResponse<CartVo> update(Integer userId, Integer productId, Integer count) {
+        if (userId == null || productId == null){
+            return ServerResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(), ResponseCode.ILLEGAL_ARGUMENT.getDesc());
         }
-        Cart cart = cartMapper.selectCartByUserIdProductId(userId,productId);
-        if(cart != null){
+        //先查询出购物车里面当前商品的数据 在对当前商品的数据进行相减 相减后在同步一下 数据库
+        Cart cart = cartMapper.selectCartByUserIdProductId(userId, productId);
+        if (cart != null){
             cart.setQuantity(count);
         }
         cartMapper.updateByPrimaryKey(cart);
         return this.list(userId);
     }
 
-    public ServerResponse<CartVo> deleteProduct(Integer userId,String productIds){
+
+//    @Override
+//    public ServerResponse<CartVo> update(Integer userId, Integer productId, Integer count){
+//        if(productId == null || count == null){
+//            return ServerResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(),ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+//        }
+//        Cart cart = cartMapper.selectCartByUserIdProductId(userId,productId);
+//        if(cart != null){
+//            cart.setQuantity(count);
+//        }
+//        cartMapper.updateByPrimaryKey(cart);
+//        return this.list(userId);
+//    }
+
+    /**
+     * 删除购物车里面的商品
+     * @param userId 用户id
+     * @param productIds 多个商品的id ID,id
+     * @return 返回一个购物车对象
+     */
+    @Override
+    public ServerResponse<CartVo> deleteProduct(Integer userId, String productIds){
         List<String> productList = Splitter.on(",").splitToList(productIds);
         if(CollectionUtils.isEmpty(productList)){
             return ServerResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(),ResponseCode.ILLEGAL_ARGUMENT.getDesc());
@@ -79,14 +113,27 @@ public class CartServiceImpl implements ICartService {
     }
 
 
+    /**
+     * 查询购物车列表
+     * @param userId 人员id
+     * @return 返回一个购物车列表
+     */
+    @Override
     public ServerResponse<CartVo> list (Integer userId){
         CartVo cartVo = this.getCartVoLimit(userId);
         return ServerResponse.createBySuccess(cartVo);
     }
 
 
-
-    public ServerResponse<CartVo> selectOrUnSelect (Integer userId,Integer productId,Integer checked){
+    /**
+     * 取消选中一些商品
+     * @param userId 用户id
+     * @param productId 商品id
+     * @param checked 是否选中
+     * @return
+     */
+    @Override
+    public ServerResponse<CartVo> selectOrUnSelect (Integer userId, Integer productId, Integer checked){
         cartMapper.checkedOrUncheckedProduct(userId,productId,checked);
         return this.list(userId);
     }
@@ -98,20 +145,11 @@ public class CartServiceImpl implements ICartService {
         return ServerResponse.createBySuccess(cartMapper.selectCartProductCount(userId));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /**
+     * 根据用户id查询购物车的列表
+     * @param userId 人员id
+     * @return 返回一个购物车的Vo类
+     */
     private CartVo getCartVoLimit(Integer userId){
         CartVo cartVo = new CartVo();
         List<Cart> cartList = cartMapper.selectCartByUserId(userId);
